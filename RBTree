@@ -1,0 +1,440 @@
+#include <iostream>
+// Red-Black Node class template
+template <typename T>
+class RBNode
+{
+ 
+public:
+    T data;
+    RBNode<T> *left;
+    RBNode<T> *right;
+    RBNode<T> *parent;
+    bool is_black;
+
+    RBNode(T data) : data(data), left(nullptr), right(nullptr), parent(nullptr), is_black(false) {}
+};
+
+// Red-Black Tree class template
+template <typename T>
+class RBTree
+{
+private:
+    RBNode<T> *root;
+public:
+
+
+    RBTree() : root(nullptr) {}
+
+    RBNode<T> *getRoot() { return this->root; }
+
+    //Right Left of the node
+
+    void rotate_left(RBNode<T> *x)
+    {
+        RBNode<T> *y = x->right;
+        x->right = y->left;
+        if (y->left != nullptr)
+        {
+            y->left->parent = x;
+        }
+        y->parent = x->parent;
+        if (x->parent == nullptr)
+        {
+            root = y;
+        }
+        else if (x == x->parent->left)
+        {
+            x->parent->left = y;
+        }
+        else
+        {
+            x->parent->right = y;
+        }
+        y->left = x;
+        x->parent = y;
+    }
+
+    //Right Rotation of the node
+
+    void rotate_right(RBNode<T> *x)
+    {
+        RBNode<T> *y = x->left;
+        x->left = y->right;
+        if (y->right != nullptr)
+        {
+            y->right->parent = x;
+        }
+        y->parent = x->parent;
+        if (x->parent == nullptr)
+        {
+            root = y;
+        }
+        else if (x == x->parent->right)
+        {
+            x->parent->right = y;
+        }
+        else
+        {
+            x->parent->left = y;
+        }
+        y->right = x;
+        x->parent = y;
+    }
+
+    //Insert nodes in the tree
+
+        void insert(T data)
+    {
+        RBNode<T> *z = new RBNode<T>(data);
+        RBNode<T> *y = nullptr;
+        RBNode<T> *x = root;
+        while (x != nullptr)
+        {
+            y = x;
+            if (z->data < x->data)
+            {
+                x = x->left;
+            }
+            else
+            {
+                x = x->right;
+            }
+        }
+        z->parent = y;
+        if (y == nullptr)
+        {
+            root = z;
+        }
+        else if (z->data < y->data)
+        {
+            y->left = z;
+        }
+        else
+        {
+            y->right = z;
+        }
+        z->left = nullptr;
+        z->right = nullptr;
+        z->is_black = false;
+        fix_insert(z);
+    }
+
+    //Fixing the insert of the node
+
+    void fix_insert(RBNode<T> *x)
+    {
+        while (x != root && x->parent->is_black == false)
+        {
+            if (x->parent == x->parent->parent->left)
+            {
+                RBNode<T> *y = x->parent->parent->right;
+                if (y != nullptr && y->is_black == false)
+                {
+                    x->parent->is_black = true;
+                    y->is_black = true;
+                    x->parent->parent->is_black = false;
+                    x = x->parent->parent;
+                }
+                else
+                {
+                    if (x == x->parent->right)
+                    {
+                        x = x->parent;
+                        rotate_left(x);
+                    }
+                    x->parent->is_black = true;
+                    x->parent->parent->is_black = false;
+                    rotate_right(x->parent->parent);
+                }
+            }
+            else
+            {
+                RBNode<T> *y = x->parent->parent->left;
+                if (y != nullptr && y->is_black == false)
+                {
+                    x->parent->is_black = true;
+                    y->is_black = true;
+                    x->parent->parent->is_black = false;
+                    x = x->parent->parent;
+                }
+                else
+                {
+                    if (x == x->parent->left)
+                    {
+                        x = x->parent;
+                        rotate_right(x);
+                    }
+                    x->parent->is_black = true;
+                    x->parent->parent->is_black = false;
+                    rotate_left(x->parent->parent);
+                }
+            }
+        }
+        root->is_black = true;
+    }
+
+    // transplanting nodes
+
+    void transplant(RBNode<T> *u, RBNode<T> *v)
+    {
+        if (u->parent == nullptr)
+        {
+            root = v;
+        }
+        else if (u == u->parent->left)
+        {
+            u->parent->left = v;
+        }
+        else
+        {
+            u->parent->right = v;
+        }
+        if (v != nullptr)
+        {
+            v->parent = u->parent;
+        }
+    }
+
+
+    //Removing a node from the tree
+    void remove(const T &data)
+{
+    RBNode<T> *z = find_node(data);
+    if (z == nullptr)
+    {
+        // node not found, do nothing
+        return;
+    }
+
+    RBNode<T> *x, *y;
+    bool y_original_color;
+
+    if (z->left == nullptr || z->right == nullptr)
+    {
+        y = z;
+    }
+    else
+    {
+        y = tree_successor(z);
+    }
+
+    if (y->left != nullptr)
+    {
+        x = y->left;
+    }
+    else
+    {
+        x = y->right;
+    }
+
+    if (x != nullptr)
+    {
+        x->parent = y->parent;
+    }
+
+    if (y->parent == nullptr)
+    {
+        // y is the root node
+        root = x;
+    }
+    else if (y == y->parent->left)
+    {
+        y->parent->left = x;
+    }
+    else
+    {
+        y->parent->right = x;
+    }
+
+    if (y != z)
+    {
+        z->data = y->data;
+    }
+
+    y_original_color = y->is_black;
+    delete y;
+
+    if (x == nullptr)
+    {
+        // if x is nullptr, we need to start fixup from y's parent
+        x = y->parent;
+    }
+
+    if (y_original_color)
+    {
+        delete_fixup(x);
+    }
+}
+
+
+  
+    //Fixing the delete of the node
+    void delete_fixup(RBNode<T> *x)
+    {
+        while (x != root && x->is_black)
+        {
+            if (x == x->parent->left)
+            {
+                RBNode<T> *w = x->parent->right;
+                if (!w->is_black)
+                {
+                    w->is_black = true;
+                    x->parent->is_black = false;
+                    rotate_left(x->parent);
+                    w = x->parent->right;
+                }
+                if (w->left->is_black && w->right->is_black)
+                {
+                    w->is_black = false;
+                    x = x->parent;
+                }
+                else
+                {
+                    if (w->right->is_black)
+                    {
+                        w->left->is_black = true;
+                        w->is_black = false;
+                        rotate_right(w);
+                        w = x->parent->right;
+                    }
+                    w->is_black = x->parent->is_black;
+                    x->parent->is_black = true;
+                    w->right->is_black = true;
+                    rotate_left(x->parent);
+                    x = root;
+                }
+            }
+            else
+            {
+                RBNode<T> *w = x->parent->left;
+                if (!w->is_black)
+                {
+                    w->is_black = true;
+                    x->parent->is_black = false;
+                    rotate_right(x->parent);
+                    w = x->parent->left;
+                }
+                if (w->left->is_black && w->right->is_black)
+                {
+                    w->is_black = false;
+                    x = x->parent;
+                }
+                else
+                {
+                    if (w->left->is_black)
+                    {
+                        w->right->is_black = true;
+                        w->is_black = false;
+                        rotate_left(w);
+                        w = x->parent->left;
+                    }
+                    w->is_black = x->parent->is_black;
+                    x->parent->is_black = true;
+                    w->left->is_black = true;
+                    rotate_right(x->parent);
+                    x = root;
+                }
+            }
+        }
+        x->is_black = true;
+    }
+
+
+      //minimum element of the tree
+
+    RBNode<T> *tree_minimum(RBNode<T> *x)
+    {
+        while (x->left != nullptr)
+        {
+            x = x->left;
+        }
+        return x;
+    }
+
+  
+    //Successor of a node
+
+    RBNode<T>* tree_successor(RBNode<T>* x) {
+    if (x->right != nullptr) {
+        return tree_minimum(x->right);
+    }
+
+    RBNode<T>* y = x->parent;
+    while (y != nullptr && x == y->right) {
+        x = y;
+        y = y->parent;
+    }
+
+    if (y == nullptr) {
+        // x is the maximum node in the tree
+        y = root;
+        while (y->right != nullptr) {
+            y = y->right;
+        }
+        return y;
+    } else {
+        return y;
+    }
+}
+    RBNode<T> *find_node(T data)
+    {
+        RBNode<T> *current = root;
+        while (current != nullptr)
+        {
+            if (data == current->data)
+            {
+                return current;
+            }
+            else if (data < current->data)
+            {
+                current = current->left;
+            }
+            else
+            {
+                current = current->right;
+            }
+        }
+        return nullptr;
+    }
+
+    // Preorder print of the RBTree
+    void print_preorder()
+    {
+        preorder_traversal(root);
+    }
+
+    void preorder_traversal(RBNode<T> *node)
+    {
+        if (node == nullptr)
+        {
+            return;
+        }
+        if (node->is_black)
+        {
+            std::cout << node->data << " nero ";
+        }
+        else
+        {
+            std::cout << node->data << " rosso ";
+        }
+        preorder_traversal(node->left);
+        preorder_traversal(node->right);
+    }
+};
+
+int main()
+{
+    RBTree<int> tree;
+    tree.insert(43);
+    tree.insert(27);
+    tree.insert(21);
+    tree.insert(2);
+    tree.insert(3);
+
+
+    //tree.remove(3);
+    RBNode<int> *x = tree.getRoot();
+    std::cout << "New root: " << x->data << std::endl;
+    tree.print_preorder();
+    return 0;
+}
